@@ -4,212 +4,248 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Panel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: #f5f5f5;
+    background: #f4f4f4;
     font-family: 'Segoe UI', sans-serif;
     color: #1a1a1a;
-    min-height: 100vh;
-    padding: 2rem;
+    
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
   }
 
-  h1 {
-    font-size: 1.4rem; font-weight: 700;
-    margin-bottom: 1.5rem; color: #111;
-    border-bottom: 2px solid #111; padding-bottom: 0.6rem;
-  }
-
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 1.5rem;
-    max-width: 1200px;
-  }
-  @media (max-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 580px) { .grid { grid-template-columns: 1fr; } }
-
-  .card {
+  /* ── ÜST PANEL ── */
+  #top {
     background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    padding: 1.4rem;
+    border-bottom: 2px solid #e8e8e8;
+    padding: 0.9rem 1.4rem;
+    flex-shrink: 0;
   }
 
-  .card h2 {
-    font-size: 0.75rem; font-weight: 600;
-    letter-spacing: 2px; text-transform: uppercase;
-    color: #999; margin-bottom: 1rem;
+  .top-title {
+    font-size: 1rem; font-weight: 700; color: #111;
+    margin-bottom: 0.7rem; display: flex; align-items: center; gap: 0.5rem;
   }
 
-  textarea {
-    width: 100%; min-height: 100px;
+  .inputs-row {
+    display: flex; gap: 0.7rem; align-items: flex-end; flex-wrap: wrap;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 0.25rem; }
+  .field label { font-size: 0.67rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #aaa; }
+
+  .field input {
+    padding: 0.5rem 0.75rem;
     border: 1px solid #ddd; border-radius: 6px;
-    padding: 0.7rem; font-size: 1rem;
-    font-family: inherit; resize: vertical; outline: none;
+    font-size: 0.95rem; outline: none; font-family: inherit;
     transition: border-color 0.2s;
   }
-  textarea:focus { border-color: #333; }
-
-  input[type="text"], input[type="time"], input[type="color"] {
-    padding: 0.55rem 0.8rem;
-    border: 1px solid #ddd; border-radius: 6px;
-    font-size: 0.95rem; outline: none;
-    font-family: inherit;
-    transition: border-color 0.2s;
-  }
-  input:focus { border-color: #333; }
-
-  .btn-row { display: flex; gap: 0.6rem; margin-top: 0.8rem; flex-wrap: wrap; }
+  .field input:focus { border-color: #111; }
+  input[type="date"] { cursor: pointer; }
+  input[type="color"] { height: 36px; padding: 2px 4px; cursor: pointer; width: 52px; }
+  input[type="time"] { width: 100px; }
 
   button {
-    padding: 0.6rem 1.2rem; border: none; border-radius: 6px;
-    font-size: 0.9rem; font-weight: 600; cursor: pointer;
-    transition: opacity 0.15s;
+    padding: 0.52rem 1rem; border: none; border-radius: 6px;
+    font-size: 0.88rem; font-weight: 600; cursor: pointer;
+    transition: opacity 0.15s; font-family: inherit;
   }
   button:hover { opacity: 0.8; }
-  .btn-primary { background: #111; color: #fff; flex: 1; }
-  .btn-danger  { background: #fee2e2; color: #cc0000; }
-  .btn-green   { background: #dcfce7; color: #16a34a; }
-  .btn-sm { padding: 0.35rem 0.7rem; font-size: 0.8rem; }
+  .btn-black  { background: #111; color: #fff; }
+  .btn-green  { background: #dcfce7; color: #16a34a; }
+  .btn-red    { background: #fee2e2; color: #cc0000; }
+  .btn-blue   { background: #dbeafe; color: #1d4ed8; }
+  .btn-sm     { padding: 0.28rem 0.6rem; font-size: 0.76rem; }
 
-  #send-status { margin-top: 0.6rem; font-size: 0.8rem; color: #999; min-height: 1.2em; }
-  #send-status.ok  { color: #16a34a; }
-  #send-status.err { color: #cc0000; }
+  .divider { border: none; border-top: 1px solid #f0f0f0; margin: 0.7rem 0; }
 
-  .current-val {
-    margin-top: 1rem; padding: 0.8rem;
-    background: #f9f9f9; border-radius: 6px; border: 1px solid #ececec;
-  }
-  .current-val label {
-    font-size: 0.7rem; text-transform: uppercase;
-    letter-spacing: 1px; color: #aaa; display: block; margin-bottom: 0.3rem;
-  }
-  #current-text { font-size: 1.6rem; font-weight: 700; color: #111; word-break: break-all; }
-  #current-text.empty { color: #ccc; font-size: 0.9rem; font-weight: 400; }
+  .row2 { display: flex; gap: 0.7rem; align-items: center; flex-wrap: wrap; }
 
-  /* geçmiş & gerçekleşen listeler */
-  .scroll-list {
-    list-style: none;
-    max-height: 280px;
-    overflow-y: auto;
-    margin-bottom: 1rem;
+  #renk-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+  .renk-badge {
+    display: flex; align-items: center; gap: 0.3rem;
+    padding: 0.18rem 0.5rem; border-radius: 999px;
+    font-size: 0.7rem; font-weight: 600;
+    border: 1px solid #e0e0e0; background: #f9f9f9;
   }
-  .scroll-list li {
-    display: flex; justify-content: space-between; align-items: baseline;
-    padding: 0.55rem 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem;
-  }
-  .scroll-list li:last-child { border-bottom: none; }
-  .scroll-list .val { font-weight: 600; }
-  .scroll-list .val.green { color: #16a34a; }
-  .scroll-list .time { font-size: 0.72rem; color: #bbb; white-space: nowrap; margin-left: 0.8rem; }
-  .scroll-list .empty-msg { color: #ccc; font-size: 0.85rem; }
+  .renk-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .renk-badge button { background: none; color: #bbb; padding: 0; font-size: 0.72rem; }
 
-  .input-row { display: flex; gap: 0.5rem; margin-top: 0.4rem; flex-wrap: wrap; }
-  .input-row input[type="text"] { flex: 1; min-width: 80px; }
+  #status { font-size: 0.78rem; color: #16a34a; }
+  #screen-now { font-size: 0.72rem; color: #aaa; }
 
-  /* renk aralıkları */
-  .renk-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto auto auto;
-    gap: 0.4rem;
-    align-items: center;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #f0f0f0;
-    font-size: 0.85rem;
+  /* ── ALT PANEL ── */
+  #bottom {
+    flex: 1; overflow: auto; padding: 1rem 1.4rem;
+    display: flex; flex-direction: column; gap: 1rem;
   }
-  .renk-row:last-child { border-bottom: none; }
-  .renk-row .renk-preview {
-    width: 20px; height: 20px; border-radius: 4px;
-    border: 1px solid #ddd; display: inline-block; flex-shrink: 0;
+
+  /* Grafik */
+  .chart-card {
+    background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 1rem 1.2rem;
   }
-  .renk-ekle-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto auto;
-    gap: 0.5rem; align-items: center;
-    margin-top: 0.8rem; padding-top: 0.8rem;
-    border-top: 1px solid #f0f0f0;
+
+  .chart-top {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.5rem;
   }
-  .renk-ekle-form label { font-size: 0.7rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
-  input[type="color"] { width: 48px; height: 36px; padding: 2px; cursor: pointer; }
-  #renk-list { list-style: none; max-height: 260px; overflow-y: auto; }
-  #renk-empty { color: #ccc; font-size: 0.85rem; padding: 0.4rem 0; }
+
+  .chart-top h2 { font-size: 0.78rem; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+
+  .date-range { display: flex; align-items: center; gap: 0.4rem; }
+  .date-range input { padding: 0.3rem 0.5rem; border: 1px solid #ddd; border-radius: 5px; font-size: 0.8rem; outline: none; }
+  .date-range button { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+
+  .chart-wrap { position: relative; height: 200px; }
+
+  /* Özet kartlar */
+  .summary { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+  .s-card {
+    background: #fff; border: 1px solid #e8e8e8; border-radius: 8px;
+    padding: 0.5rem 1rem; text-align: center; flex: 1; min-width: 100px;
+  }
+  .s-label { font-size: 0.63rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
+  .s-val { font-size: 1.1rem; font-weight: 700; color: #111; }
+
+  /* Tablo */
+  .table-card {
+    background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; overflow: auto;
+  }
+
+  .table-top {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.7rem 1rem; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; gap: 0.5rem;
+  }
+
+  .table-top h2 { font-size: 0.78rem; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  thead tr { background: #fafafa; }
+  th { padding: 0.6rem 0.8rem; text-align: left; font-size: 0.68rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #aaa; border-bottom: 1px solid #f0f0f0; }
+  td { padding: 0.55rem 0.8rem; border-bottom: 1px solid #f8f8f8; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+
+  tr.hit  { background: #f0fdf4; }
+  tr.miss { background: #fff5f5; }
+
+  .edit-input { width: 80px; padding: 0.28rem 0.4rem; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 0.85rem; font-family: inherit; outline: none; }
+  .edit-input:focus { border-color: #111; }
+  .edit-input.wide { width: 130px; }
+
+  td.pos { color: #16a34a; font-weight: 700; }
+  td.neg { color: #cc0000; font-weight: 700; }
+  td.good { color: #16a34a; font-weight: 700; }
+  td.bad  { color: #cc0000; font-weight: 700; }
+
+  .empty-row td { text-align: center; color: #ccc; padding: 2rem; font-size: 0.85rem; }
 </style>
 </head>
 <body>
 
-<h1>Admin Panel</h1>
+<!-- ══ ÜST ══ -->
+<div id="top">
+  <div class="top-title">📊 Kalibre Admin Panel</div>
 
-<div class="grid">
-
-  <!-- SÜTUN 1: Hedef gönder -->
-  <div class="card">
-    <h2>Hedef Gönder</h2>
-    <textarea id="msg" placeholder="Ekrana yansıtılacak metin..." maxlength="300"></textarea>
-    <div class="btn-row">
-      <button class="btn-primary" onclick="send()">▶ Gönder</button>
-      <button class="btn-danger" onclick="clearScreen()">Sil</button>
+  <div class="inputs-row">
+    <div class="field">
+      <label>Tarih</label>
+      <input type="date" id="f-tarih">
     </div>
-    <div id="send-status"></div>
-
-    <div class="current-val">
-      <label>Ekrandaki mevcut değer</label>
-      <div id="current-text" class="empty">—</div>
+    <div class="field">
+      <label>Günlük Hedef</label>
+      <input type="number" id="f-hedef" placeholder="0" style="width:110px">
     </div>
+    <div class="field">
+      <label>Gerçekleşen</label>
+      <input type="number" id="f-gercek" placeholder="0" style="width:110px">
+    </div>
+    <div class="field">
+      <label>Not</label>
+      <input type="text" id="f-not" placeholder="Açıklama..." style="width:160px">
+    </div>
+    <button class="btn-black" onclick="addRow()" style="margin-bottom:1px">+ Ekle & Ekrana Gönder</button>
+    <button class="btn-red btn-sm" onclick="clearScreen()" style="margin-bottom:1px">Ekranı Sil</button>
+    <span id="status"></span>
+  </div>
 
-    <div style="margin-top:1.2rem">
-      <h2 style="margin-bottom:0.8rem">Geçmiş (gün gün)</h2>
-      <ul id="history-list" class="scroll-list">
-        <li><span class="empty-msg">Yükleniyor...</span></li>
-      </ul>
+  <hr class="divider">
+
+  <div class="row2">
+    <span style="font-size:0.75rem;color:#aaa">🎨 Renk Aralığı:</span>
+    <input type="time" id="r-bas" value="09:00">
+    <span style="color:#ccc;font-size:0.8rem">→</span>
+    <input type="time" id="r-bit" value="09:05">
+    <input type="color" id="r-renk" value="#cc0000">
+    <button class="btn-sm btn-black" onclick="addRenk()">+ Ekle</button>
+    <div id="renk-badges"></div>
+    <span id="screen-now"></span>
+  </div>
+</div>
+
+<!-- ══ ALT ══ -->
+<div id="bottom">
+
+  <!-- Özet -->
+  <div class="summary">
+    <div class="s-card"><div class="s-label">Toplam Hedef</div><div class="s-val" id="s-th">—</div></div>
+    <div class="s-card"><div class="s-label">Toplam Gerçekleşen</div><div class="s-val" id="s-tg">—</div></div>
+    <div class="s-card"><div class="s-label">Ort. Başarı</div><div class="s-val" id="s-ort">—</div></div>
+    <div class="s-card"><div class="s-label">En Yüksek</div><div class="s-val" id="s-max">—</div></div>
+    <div class="s-card"><div class="s-label">Hedef Tutulan Gün</div><div class="s-val" id="s-hit">—</div></div>
+  </div>
+
+  <!-- Grafik -->
+  <div class="chart-card">
+    <div class="chart-top">
+      <h2>📈 Hedef & Gerçekleşen Grafiği</h2>
+      <div class="date-range">
+        <input type="date" id="g-bas">
+        <span style="color:#ccc">—</span>
+        <input type="date" id="g-bit">
+        <button class="btn-blue btn-sm" onclick="filterChart()">Uygula</button>
+        <button class="btn-sm" style="background:#f0f0f0;color:#555" onclick="resetChart()">Bu Ay</button>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="myChart"></canvas>
     </div>
   </div>
 
-  <!-- SÜTUN 2: Gerçekleşen -->
-  <div class="card">
-    <h2>Gerçekleşen</h2>
-    <ul id="actual-list" class="scroll-list">
-      <li><span class="empty-msg">Henüz giriş yok.</span></li>
-    </ul>
-    <h2 style="margin-bottom:0.6rem">Yeni Gerçekleşen Ekle</h2>
-    <div class="input-row">
-      <input type="text" id="actual-input" placeholder="Değer gir...">
-      <button class="btn-green" onclick="addActual()">+ Ekle</button>
-    </div>
-  </div>
-
-  <!-- SÜTUN 3: Arka plan renk aralıkları -->
-  <div class="card">
-    <h2>Arka Plan Renk Aralıkları</h2>
-    <ul id="renk-list">
-      <li id="renk-empty">Henüz aralık yok.</li>
-    </ul>
-
-    <div class="renk-ekle-form">
-      <div>
-        <label>Başlangıç</label><br>
-        <input type="time" id="r-baslangic" value="09:00">
-      </div>
-      <div>
-        <label>Bitiş</label><br>
-        <input type="time" id="r-bitis" value="09:05">
-      </div>
-      <div>
-        <label>Renk</label><br>
-        <input type="color" id="r-renk" value="#cc0000">
-      </div>
-      <div style="padding-top:1.2rem">
-        <button class="btn-primary" onclick="addRenk()">+ Ekle</button>
+  <!-- Tablo -->
+  <div class="table-card">
+    <div class="table-top">
+      <h2>📋 Günlük Tablo</h2>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn-blue btn-sm" onclick="exportExcel()">⬇ Excel</button>
+        <button class="btn-red btn-sm" onclick="clearAll()">🗑 Tümünü Sil</button>
       </div>
     </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Tarih</th>
+          <th>Hedef</th>
+          <th>Gerçekleşen</th>
+          <th>Fark</th>
+          <th>% Oran</th>
+          <th>Not</th>
+          <th>İşlem</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
   </div>
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getDatabase, ref, set, push, remove, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+  import { getDatabase, ref, set, push, remove, update, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCY0nkNYkEUqQ-vFYFMtNLmtR1CiMxgcCk",
@@ -217,125 +253,258 @@
     databaseURL: "https://kalibre-hedef-default-rtdb.europe-west1.firebasedatabase.app",
     projectId: "kalibre-hedef",
     storageBucket: "kalibre-hedef.firebasestorage.app",
-    messagingSenderId: "410916627776",
+    messagingSenderId: "410916827776",
     appId: "1:410916627776:web:7979504e9de837060206a5"
   };
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  // ── Mevcut değer ──
+  let tableData = {};
+  let chartInstance = null;
+  let chartStart = null, chartEnd = null;
+
+  // Bugün & bu ay varsayılan
+  const today = new Date();
+  document.getElementById('f-tarih').valueAsDate = today;
+
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthEnd   = new Date(today.getFullYear(), today.getMonth()+1, 0);
+  document.getElementById('g-bas').value = fmt(monthStart);
+  document.getElementById('g-bit').value = fmt(monthEnd);
+  chartStart = fmt(monthStart);
+  chartEnd   = fmt(monthEnd);
+
+  function fmt(d) { return d.toISOString().split('T')[0]; }
+
+  // ── Firebase dinle ──
+  onValue(ref(db, 'tablo'), (snap) => {
+    tableData = snap.val() || {};
+    renderTable();
+    renderChart();
+  });
+
   onValue(ref(db, 'mesaj'), (snap) => {
-    const data = snap.val();
-    const cur = document.getElementById('current-text');
-    if (data?.text) { cur.textContent = data.text; cur.classList.remove('empty'); }
-    else { cur.textContent = '—'; cur.classList.add('empty'); }
+    const d = snap.val();
+    document.getElementById('screen-now').textContent = d?.text ? `Ekranda: "${d.text}"` : 'Ekran boş';
   });
 
-  // ── Geçmiş ──
-  onValue(ref(db, 'gecmis'), (snap) => {
-    const list = document.getElementById('history-list');
-    const data = snap.val();
-    if (!data) { list.innerHTML = '<li><span class="empty-msg">Henüz kayıt yok.</span></li>'; return; }
-    const items = Object.values(data).reverse();
-    list.innerHTML = '';
-    items.forEach(item => {
-      const li = document.createElement('li');
-      li.innerHTML = `<span class="val">${item.text}</span><span class="time">${item.tarih || ''} ${item.saat || ''}</span>`;
-      list.appendChild(li);
-    });
-  });
-
-  // ── Gerçekleşen ──
-  onValue(ref(db, 'gerceklesen'), (snap) => {
-    const list = document.getElementById('actual-list');
-    const data = snap.val();
-    if (!data) { list.innerHTML = '<li><span class="empty-msg">Henüz giriş yok.</span></li>'; return; }
-    const items = Object.values(data).reverse();
-    list.innerHTML = '';
-    items.forEach(item => {
-      const li = document.createElement('li');
-      li.innerHTML = `<span class="val green">${item.text}</span><span class="time">${item.tarih || ''} ${item.saat || ''}</span>`;
-      list.appendChild(li);
-    });
-  });
-
-  // ── Renk aralıkları ──
   onValue(ref(db, 'renkAraliklari'), (snap) => {
     const data = snap.val();
-    const ul = document.getElementById('renk-list');
-    const empty = document.getElementById('renk-empty');
-    ul.innerHTML = '';
-    if (!data) {
-      const li = document.createElement('li');
-      li.id = 'renk-empty';
-      li.textContent = 'Henüz aralık yok.';
-      li.style.cssText = 'color:#ccc;font-size:0.85rem;padding:0.4rem 0;';
-      ul.appendChild(li);
-      return;
-    }
+    const badges = document.getElementById('renk-badges');
+    badges.innerHTML = '';
+    if (!data) return;
     Object.entries(data).forEach(([key, r]) => {
-      const li = document.createElement('li');
-      li.className = 'renk-row';
-      li.innerHTML = `
-        <span>${r.baslangic}</span>
-        <span>${r.bitis}</span>
-        <span class="renk-preview" style="background:${r.renk}"></span>
-        <span style="font-size:0.8rem;color:#666">${r.renk}</span>
-        <button class="btn-sm btn-danger" onclick="deleteRenk('${key}')">Sil</button>
-      `;
-      ul.appendChild(li);
+      const div = document.createElement('div');
+      div.className = 'renk-badge';
+      div.innerHTML = `<div class="renk-dot" style="background:${r.renk}"></div><span>${r.baslangic}–${r.bitis}</span><button onclick="deleteRenk('${key}')">✕</button>`;
+      badges.appendChild(div);
     });
   });
 
-  // ── Gönder ──
-  window.send = async function() {
-    const text = document.getElementById('msg').value.trim();
-    if (!text) { status('Metin boş!', 'err'); return; }
+  // ── Tablo render ──
+  function renderTable() {
+    const tbody = document.getElementById('tbody');
+    const rows = Object.entries(tableData).sort((a,b) => b[1].tarih?.localeCompare(a[1].tarih));
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Henüz veri yok.</td></tr>';
+      updateSummary([]);
+      return;
+    }
+
+    tbody.innerHTML = '';
+    const vals = [];
+
+    rows.forEach(([key, r]) => {
+      const h = parseFloat(r.hedef) || 0;
+      const g = parseFloat(r.gerceklesen) || 0;
+      const fark = g - h;
+      const oran = h !== 0 ? ((g/h)*100).toFixed(1) : null;
+      const hit = h > 0 && g >= h;
+      vals.push({ hedef: h, gercek: g, oran: oran ? parseFloat(oran) : null });
+
+      const tr = document.createElement('tr');
+      tr.className = hit ? 'hit' : 'miss';
+      tr.innerHTML = `
+        <td>${r.tarih || '—'}</td>
+        <td><input class="edit-input" type="number" value="${h}" onchange="editRow('${key}','hedef',this.value)"></td>
+        <td><input class="edit-input" type="number" value="${g}" onchange="editRow('${key}','gerceklesen',this.value)"></td>
+        <td class="${fark >= 0 ? 'pos' : 'neg'}">${fark >= 0 ? '+' : ''}${fark}</td>
+        <td class="${oran && parseFloat(oran) >= 100 ? 'good' : 'bad'}">${oran ? '%'+oran : '—'}</td>
+        <td><input class="edit-input wide" type="text" value="${r.not||''}" onchange="editRow('${key}','not',this.value)"></td>
+        <td><button class="btn-sm btn-red" onclick="deleteRow('${key}')">Sil</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    updateSummary(vals);
+  }
+
+  function updateSummary(vals) {
+    const th = vals.reduce((s,v)=>s+v.hedef,0);
+    const tg = vals.reduce((s,v)=>s+v.gercek,0);
+    const orns = vals.filter(v=>v.oran!==null).map(v=>v.oran);
+    const ort = orns.length ? (orns.reduce((s,v)=>s+v,0)/orns.length).toFixed(1) : '—';
+    const maxG = vals.length ? Math.max(...vals.map(v=>v.gercek)) : '—';
+    const hitCount = vals.filter(v=>v.hedef>0&&v.gercek>=v.hedef).length;
+    document.getElementById('s-th').textContent  = th || '—';
+    document.getElementById('s-tg').textContent  = tg || '—';
+    document.getElementById('s-ort').textContent = ort !== '—' ? '%'+ort : '—';
+    document.getElementById('s-max').textContent = maxG;
+    document.getElementById('s-hit').textContent = hitCount + ' gün';
+  }
+
+  // ── Grafik ──
+  function renderChart() {
+    const rows = Object.values(tableData)
+      .filter(r => r.tarih >= chartStart && r.tarih <= chartEnd)
+      .sort((a,b) => a.tarih.localeCompare(b.tarih));
+
+    const labels = rows.map(r => r.tarih);
+    const hedefler = rows.map(r => parseFloat(r.hedef)||0);
+    const gercekler = rows.map(r => parseFloat(r.gerceklesen)||0);
+
+    if (chartInstance) chartInstance.destroy();
+
+    const ctx = document.getElementById('myChart').getContext('2d');
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Hedef',
+            data: hedefler,
+            backgroundColor: 'rgba(220,60,60,0.18)',
+            borderColor: '#cc0000',
+            borderWidth: 2,
+            borderRadius: 4,
+            order: 2
+          },
+          {
+            label: 'Gerçekleşen',
+            data: gercekler,
+            backgroundColor: 'rgba(22,163,74,0.18)',
+            borderColor: '#16a34a',
+            borderWidth: 2,
+            borderRadius: 4,
+            order: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+          y: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
+  window.filterChart = function() {
+    chartStart = document.getElementById('g-bas').value;
+    chartEnd   = document.getElementById('g-bit').value;
+    renderChart();
+  };
+
+  window.resetChart = function() {
     const now = new Date();
-    try {
-      await set(ref(db, 'mesaj'), { text, zaman: now.toLocaleTimeString('tr-TR') });
-      await push(ref(db, 'gecmis'), { text, tarih: now.toLocaleDateString('tr-TR'), saat: now.toLocaleTimeString('tr-TR') });
-      status('✓ Gönderildi!', 'ok');
-      document.getElementById('msg').value = '';
-      setTimeout(() => status('', ''), 3000);
-    } catch(e) { status('Hata: ' + e.message, 'err'); }
+    chartStart = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+    chartEnd   = fmt(new Date(now.getFullYear(), now.getMonth()+1, 0));
+    document.getElementById('g-bas').value = chartStart;
+    document.getElementById('g-bit').value = chartEnd;
+    renderChart();
+  };
+
+  // ── Satır ekle + ekrana gönder ──
+  window.addRow = async function() {
+    const tarih = document.getElementById('f-tarih').value;
+    const hedef = document.getElementById('f-hedef').value;
+    const gercek = document.getElementById('f-gercek').value || '0';
+    const not_ = document.getElementById('f-not').value;
+    if (!tarih || !hedef) { st('Tarih ve hedef zorunlu!', true); return; }
+
+    await push(ref(db, 'tablo'), {
+      tarih, hedef: parseFloat(hedef),
+      gerceklesen: parseFloat(gercek), not: not_
+    });
+
+    // Ekrana da gönder
+    await set(ref(db, 'mesaj'), {
+      text: hedef,
+      zaman: new Date().toLocaleTimeString('tr-TR')
+    });
+
+    document.getElementById('f-hedef').value = '';
+    document.getElementById('f-gercek').value = '';
+    document.getElementById('f-not').value = '';
+    st('Eklendi & Ekrana Gönderildi!', false);
+    setTimeout(()=>st('',''),3000);
+  };
+
+  window.editRow = async function(key, field, value) {
+    const u = {};
+    u[field] = field==='not' ? value : parseFloat(value)||0;
+    await update(ref(db,'tablo/'+key), u);
+  };
+
+  window.deleteRow = async function(key) {
+    if (!confirm('Bu satırı silmek istediğinden emin misin?')) return;
+    await remove(ref(db,'tablo/'+key));
+  };
+
+  window.clearAll = async function() {
+    if (!confirm('Tüm tabloyu silmek istediğinden emin misin?')) return;
+    await remove(ref(db,'tablo'));
+    st('Tablo silindi.',false);
+    setTimeout(()=>st('',''),2000);
   };
 
   window.clearScreen = async function() {
-    await set(ref(db, 'mesaj'), { text: '', zaman: '' });
-    status('Ekran temizlendi.', 'ok');
-    setTimeout(() => status('', ''), 2000);
-  };
-
-  window.addActual = async function() {
-    const input = document.getElementById('actual-input');
-    const text = input.value.trim();
-    if (!text) return;
-    const now = new Date();
-    await push(ref(db, 'gerceklesen'), { text, tarih: now.toLocaleDateString('tr-TR'), saat: now.toLocaleTimeString('tr-TR') });
-    input.value = '';
+    await set(ref(db,'mesaj'),{text:'',zaman:''});
+    st('Ekran temizlendi.',false);
+    setTimeout(()=>st('',''),2000);
   };
 
   window.addRenk = async function() {
-    const bas = document.getElementById('r-baslangic').value;
-    const bit = document.getElementById('r-bitis').value;
-    const renk = document.getElementById('r-renk').value;
-    if (!bas || !bit) return;
-    await push(ref(db, 'renkAraliklari'), { baslangic: bas, bitis: bit, renk });
+    const bas=document.getElementById('r-bas').value;
+    const bit=document.getElementById('r-bit').value;
+    const renk=document.getElementById('r-renk').value;
+    if(!bas||!bit) return;
+    await push(ref(db,'renkAraliklari'),{baslangic:bas,bitis:bit,renk});
   };
 
   window.deleteRenk = async function(key) {
-    await remove(ref(db, 'renkAraliklari/' + key));
+    await remove(ref(db,'renkAraliklari/'+key));
   };
 
-  function status(msg, cls) {
-    const el = document.getElementById('send-status');
-    el.textContent = msg; el.className = cls;
+  window.exportExcel = function() {
+    const rows = Object.values(tableData).sort((a,b)=>a.tarih?.localeCompare(b.tarih));
+    if (!rows.length) { st('Veri yok!',true); return; }
+    const data = [['Tarih','Hedef','Gerçekleşen','Fark','% Oran','Not']];
+    rows.forEach(r => {
+      const h=parseFloat(r.hedef)||0, g=parseFloat(r.gerceklesen)||0;
+      data.push([r.tarih||'',h,g,g-h,h?((g/h)*100).toFixed(1)+'%':'—',r.not||'']);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Hedef-Gerçekleşen');
+    XLSX.writeFile(wb,'kalibre-hedef.xlsx');
+  };
+
+  function st(msg, isErr) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.style.color = isErr ? '#cc0000' : '#16a34a';
   }
 
-  document.getElementById('msg').addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'Enter') window.send(); });
-  document.getElementById('actual-input').addEventListener('keydown', e => { if (e.key === 'Enter') window.addActual(); });
+  document.getElementById('f-gercek').addEventListener('keydown', e=>{ if(e.key==='Enter') window.addRow(); });
 </script>
 </body>
 </html>
