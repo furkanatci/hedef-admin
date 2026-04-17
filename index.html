@@ -1,1 +1,510 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  body {
+    background: #f4f4f4;
+    font-family: 'Segoe UI', sans-serif;
+    color: #1a1a1a;
+    
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+  }
+
+  /* ── ÜST PANEL ── */
+  #top {
+    background: #fff;
+    border-bottom: 2px solid #e8e8e8;
+    padding: 0.9rem 1.4rem;
+    flex-shrink: 0;
+  }
+
+  .top-title {
+    font-size: 1rem; font-weight: 700; color: #111;
+    margin-bottom: 0.7rem; display: flex; align-items: center; gap: 0.5rem;
+  }
+
+  .inputs-row {
+    display: flex; gap: 0.7rem; align-items: flex-end; flex-wrap: wrap;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 0.25rem; }
+  .field label { font-size: 0.67rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #aaa; }
+
+  .field input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ddd; border-radius: 6px;
+    font-size: 0.95rem; outline: none; font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .field input:focus { border-color: #111; }
+  input[type="date"] { cursor: pointer; }
+  input[type="color"] { height: 36px; padding: 2px 4px; cursor: pointer; width: 52px; }
+  input[type="time"] { width: 100px; }
+
+  button {
+    padding: 0.52rem 1rem; border: none; border-radius: 6px;
+    font-size: 0.88rem; font-weight: 600; cursor: pointer;
+    transition: opacity 0.15s; font-family: inherit;
+  }
+  button:hover { opacity: 0.8; }
+  .btn-black  { background: #111; color: #fff; }
+  .btn-green  { background: #dcfce7; color: #16a34a; }
+  .btn-red    { background: #fee2e2; color: #cc0000; }
+  .btn-blue   { background: #dbeafe; color: #1d4ed8; }
+  .btn-sm     { padding: 0.28rem 0.6rem; font-size: 0.76rem; }
+
+  .divider { border: none; border-top: 1px solid #f0f0f0; margin: 0.7rem 0; }
+
+  .row2 { display: flex; gap: 0.7rem; align-items: center; flex-wrap: wrap; }
+
+  #renk-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+  .renk-badge {
+    display: flex; align-items: center; gap: 0.3rem;
+    padding: 0.18rem 0.5rem; border-radius: 999px;
+    font-size: 0.7rem; font-weight: 600;
+    border: 1px solid #e0e0e0; background: #f9f9f9;
+  }
+  .renk-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .renk-badge button { background: none; color: #bbb; padding: 0; font-size: 0.72rem; }
+
+  #status { font-size: 0.78rem; color: #16a34a; }
+  #screen-now { font-size: 0.72rem; color: #aaa; }
+
+  /* ── ALT PANEL ── */
+  #bottom {
+    flex: 1; overflow: auto; padding: 1rem 1.4rem;
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+
+  /* Grafik */
+  .chart-card {
+    background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 1rem 1.2rem;
+  }
+
+  .chart-top {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.5rem;
+  }
+
+  .chart-top h2 { font-size: 0.78rem; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+
+  .date-range { display: flex; align-items: center; gap: 0.4rem; }
+  .date-range input { padding: 0.3rem 0.5rem; border: 1px solid #ddd; border-radius: 5px; font-size: 0.8rem; outline: none; }
+  .date-range button { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+
+  .chart-wrap { position: relative; height: 200px; }
+
+  /* Özet kartlar */
+  .summary { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+  .s-card {
+    background: #fff; border: 1px solid #e8e8e8; border-radius: 8px;
+    padding: 0.5rem 1rem; text-align: center; flex: 1; min-width: 100px;
+  }
+  .s-label { font-size: 0.63rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
+  .s-val { font-size: 1.1rem; font-weight: 700; color: #111; }
+
+  /* Tablo */
+  .table-card {
+    background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; overflow: auto;
+  }
+
+  .table-top {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.7rem 1rem; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; gap: 0.5rem;
+  }
+
+  .table-top h2 { font-size: 0.78rem; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  thead tr { background: #fafafa; }
+  th { padding: 0.6rem 0.8rem; text-align: left; font-size: 0.68rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #aaa; border-bottom: 1px solid #f0f0f0; }
+  td { padding: 0.55rem 0.8rem; border-bottom: 1px solid #f8f8f8; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+
+  tr.hit  { background: #f0fdf4; }
+  tr.miss { background: #fff5f5; }
+
+  .edit-input { width: 80px; padding: 0.28rem 0.4rem; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 0.85rem; font-family: inherit; outline: none; }
+  .edit-input:focus { border-color: #111; }
+  .edit-input.wide { width: 130px; }
+
+  td.pos { color: #16a34a; font-weight: 700; }
+  td.neg { color: #cc0000; font-weight: 700; }
+  td.good { color: #16a34a; font-weight: 700; }
+  td.bad  { color: #cc0000; font-weight: 700; }
+
+  .empty-row td { text-align: center; color: #ccc; padding: 2rem; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<!-- ══ ÜST ══ -->
+<div id="top">
+  <div class="top-title">📊 Kalibre Admin Panel</div>
+
+  <div class="inputs-row">
+    <div class="field">
+      <label>Tarih</label>
+      <input type="date" id="f-tarih">
+    </div>
+    <div class="field">
+      <label>Günlük Hedef</label>
+      <input type="number" id="f-hedef" placeholder="0" style="width:110px">
+    </div>
+    <div class="field">
+      <label>Gerçekleşen</label>
+      <input type="number" id="f-gercek" placeholder="0" style="width:110px">
+    </div>
+    <div class="field">
+      <label>Not</label>
+      <input type="text" id="f-not" placeholder="Açıklama..." style="width:160px">
+    </div>
+    <button class="btn-black" onclick="addRow()" style="margin-bottom:1px">+ Ekle & Ekrana Gönder</button>
+    <button class="btn-red btn-sm" onclick="clearScreen()" style="margin-bottom:1px">Ekranı Sil</button>
+    <span id="status"></span>
+  </div>
+
+  <hr class="divider">
+
+  <div class="row2">
+    <span style="font-size:0.75rem;color:#aaa">🎨 Renk Aralığı:</span>
+    <input type="time" id="r-bas" value="09:00">
+    <span style="color:#ccc;font-size:0.8rem">→</span>
+    <input type="time" id="r-bit" value="09:05">
+    <input type="color" id="r-renk" value="#cc0000">
+    <button class="btn-sm btn-black" onclick="addRenk()">+ Ekle</button>
+    <div id="renk-badges"></div>
+    <span id="screen-now"></span>
+  </div>
+</div>
+
+<!-- ══ ALT ══ -->
+<div id="bottom">
+
+  <!-- Özet -->
+  <div class="summary">
+    <div class="s-card"><div class="s-label">Toplam Hedef</div><div class="s-val" id="s-th">—</div></div>
+    <div class="s-card"><div class="s-label">Toplam Gerçekleşen</div><div class="s-val" id="s-tg">—</div></div>
+    <div class="s-card"><div class="s-label">Ort. Başarı</div><div class="s-val" id="s-ort">—</div></div>
+    <div class="s-card"><div class="s-label">En Yüksek</div><div class="s-val" id="s-max">—</div></div>
+    <div class="s-card"><div class="s-label">Hedef Tutulan Gün</div><div class="s-val" id="s-hit">—</div></div>
+  </div>
+
+  <!-- Grafik -->
+  <div class="chart-card">
+    <div class="chart-top">
+      <h2>📈 Hedef & Gerçekleşen Grafiği</h2>
+      <div class="date-range">
+        <input type="date" id="g-bas">
+        <span style="color:#ccc">—</span>
+        <input type="date" id="g-bit">
+        <button class="btn-blue btn-sm" onclick="filterChart()">Uygula</button>
+        <button class="btn-sm" style="background:#f0f0f0;color:#555" onclick="resetChart()">Bu Ay</button>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="myChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Tablo -->
+  <div class="table-card">
+    <div class="table-top">
+      <h2>📋 Günlük Tablo</h2>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn-blue btn-sm" onclick="exportExcel()">⬇ Excel</button>
+        <button class="btn-red btn-sm" onclick="clearAll()">🗑 Tümünü Sil</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Tarih</th>
+          <th>Hedef</th>
+          <th>Gerçekleşen</th>
+          <th>Fark</th>
+          <th>% Oran</th>
+          <th>Not</th>
+          <th>İşlem</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getDatabase, ref, set, push, remove, update, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCY0nkNYkEUqQ-vFYFMtNLmtR1CiMxgcCk",
+    authDomain: "kalibre-hedef.firebaseapp.com",
+    databaseURL: "https://kalibre-hedef-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "kalibre-hedef",
+    storageBucket: "kalibre-hedef.firebasestorage.app",
+    messagingSenderId: "410916827776",
+    appId: "1:410916627776:web:7979504e9de837060206a5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  let tableData = {};
+  let chartInstance = null;
+  let chartStart = null, chartEnd = null;
+
+  // Bugün & bu ay varsayılan
+  const today = new Date();
+  document.getElementById('f-tarih').valueAsDate = today;
+
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthEnd   = new Date(today.getFullYear(), today.getMonth()+1, 0);
+  document.getElementById('g-bas').value = fmt(monthStart);
+  document.getElementById('g-bit').value = fmt(monthEnd);
+  chartStart = fmt(monthStart);
+  chartEnd   = fmt(monthEnd);
+
+  function fmt(d) { return d.toISOString().split('T')[0]; }
+
+  // ── Firebase dinle ──
+  onValue(ref(db, 'tablo'), (snap) => {
+    tableData = snap.val() || {};
+    renderTable();
+    renderChart();
+  });
+
+  onValue(ref(db, 'mesaj'), (snap) => {
+    const d = snap.val();
+    document.getElementById('screen-now').textContent = d?.text ? `Ekranda: "${d.text}"` : 'Ekran boş';
+  });
+
+  onValue(ref(db, 'renkAraliklari'), (snap) => {
+    const data = snap.val();
+    const badges = document.getElementById('renk-badges');
+    badges.innerHTML = '';
+    if (!data) return;
+    Object.entries(data).forEach(([key, r]) => {
+      const div = document.createElement('div');
+      div.className = 'renk-badge';
+      div.innerHTML = `<div class="renk-dot" style="background:${r.renk}"></div><span>${r.baslangic}–${r.bitis}</span><button onclick="deleteRenk('${key}')">✕</button>`;
+      badges.appendChild(div);
+    });
+  });
+
+  // ── Tablo render ──
+  function renderTable() {
+    const tbody = document.getElementById('tbody');
+    const rows = Object.entries(tableData).sort((a,b) => b[1].tarih?.localeCompare(a[1].tarih));
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Henüz veri yok.</td></tr>';
+      updateSummary([]);
+      return;
+    }
+
+    tbody.innerHTML = '';
+    const vals = [];
+
+    rows.forEach(([key, r]) => {
+      const h = parseFloat(r.hedef) || 0;
+      const g = parseFloat(r.gerceklesen) || 0;
+      const fark = g - h;
+      const oran = h !== 0 ? ((g/h)*100).toFixed(1) : null;
+      const hit = h > 0 && g >= h;
+      vals.push({ hedef: h, gercek: g, oran: oran ? parseFloat(oran) : null });
+
+      const tr = document.createElement('tr');
+      tr.className = hit ? 'hit' : 'miss';
+      tr.innerHTML = `
+        <td>${r.tarih || '—'}</td>
+        <td><input class="edit-input" type="number" value="${h}" onchange="editRow('${key}','hedef',this.value)"></td>
+        <td><input class="edit-input" type="number" value="${g}" onchange="editRow('${key}','gerceklesen',this.value)"></td>
+        <td class="${fark >= 0 ? 'pos' : 'neg'}">${fark >= 0 ? '+' : ''}${fark}</td>
+        <td class="${oran && parseFloat(oran) >= 100 ? 'good' : 'bad'}">${oran ? '%'+oran : '—'}</td>
+        <td><input class="edit-input wide" type="text" value="${r.not||''}" onchange="editRow('${key}','not',this.value)"></td>
+        <td><button class="btn-sm btn-red" onclick="deleteRow('${key}')">Sil</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    updateSummary(vals);
+  }
+
+  function updateSummary(vals) {
+    const th = vals.reduce((s,v)=>s+v.hedef,0);
+    const tg = vals.reduce((s,v)=>s+v.gercek,0);
+    const orns = vals.filter(v=>v.oran!==null).map(v=>v.oran);
+    const ort = orns.length ? (orns.reduce((s,v)=>s+v,0)/orns.length).toFixed(1) : '—';
+    const maxG = vals.length ? Math.max(...vals.map(v=>v.gercek)) : '—';
+    const hitCount = vals.filter(v=>v.hedef>0&&v.gercek>=v.hedef).length;
+    document.getElementById('s-th').textContent  = th || '—';
+    document.getElementById('s-tg').textContent  = tg || '—';
+    document.getElementById('s-ort').textContent = ort !== '—' ? '%'+ort : '—';
+    document.getElementById('s-max').textContent = maxG;
+    document.getElementById('s-hit').textContent = hitCount + ' gün';
+  }
+
+  // ── Grafik ──
+  function renderChart() {
+    const rows = Object.values(tableData)
+      .filter(r => r.tarih >= chartStart && r.tarih <= chartEnd)
+      .sort((a,b) => a.tarih.localeCompare(b.tarih));
+
+    const labels = rows.map(r => r.tarih);
+    const hedefler = rows.map(r => parseFloat(r.hedef)||0);
+    const gercekler = rows.map(r => parseFloat(r.gerceklesen)||0);
+
+    if (chartInstance) chartInstance.destroy();
+
+    const ctx = document.getElementById('myChart').getContext('2d');
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Hedef',
+            data: hedefler,
+            backgroundColor: 'rgba(220,60,60,0.18)',
+            borderColor: '#cc0000',
+            borderWidth: 2,
+            borderRadius: 4,
+            order: 2
+          },
+          {
+            label: 'Gerçekleşen',
+            data: gercekler,
+            backgroundColor: 'rgba(22,163,74,0.18)',
+            borderColor: '#16a34a',
+            borderWidth: 2,
+            borderRadius: 4,
+            order: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+          y: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
+  window.filterChart = function() {
+    chartStart = document.getElementById('g-bas').value;
+    chartEnd   = document.getElementById('g-bit').value;
+    renderChart();
+  };
+
+  window.resetChart = function() {
+    const now = new Date();
+    chartStart = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+    chartEnd   = fmt(new Date(now.getFullYear(), now.getMonth()+1, 0));
+    document.getElementById('g-bas').value = chartStart;
+    document.getElementById('g-bit').value = chartEnd;
+    renderChart();
+  };
+
+  // ── Satır ekle + ekrana gönder ──
+  window.addRow = async function() {
+    const tarih = document.getElementById('f-tarih').value;
+    const hedef = document.getElementById('f-hedef').value;
+    const gercek = document.getElementById('f-gercek').value || '0';
+    const not_ = document.getElementById('f-not').value;
+    if (!tarih || !hedef) { st('Tarih ve hedef zorunlu!', true); return; }
+
+    await push(ref(db, 'tablo'), {
+      tarih, hedef: parseFloat(hedef),
+      gerceklesen: parseFloat(gercek), not: not_
+    });
+
+    // Ekrana da gönder
+    await set(ref(db, 'mesaj'), {
+      text: hedef,
+      zaman: new Date().toLocaleTimeString('tr-TR')
+    });
+
+    document.getElementById('f-hedef').value = '';
+    document.getElementById('f-gercek').value = '';
+    document.getElementById('f-not').value = '';
+    st('Eklendi & Ekrana Gönderildi!', false);
+    setTimeout(()=>st('',''),3000);
+  };
+
+  window.editRow = async function(key, field, value) {
+    const u = {};
+    u[field] = field==='not' ? value : parseFloat(value)||0;
+    await update(ref(db,'tablo/'+key), u);
+  };
+
+  window.deleteRow = async function(key) {
+    if (!confirm('Bu satırı silmek istediğinden emin misin?')) return;
+    await remove(ref(db,'tablo/'+key));
+  };
+
+  window.clearAll = async function() {
+    if (!confirm('Tüm tabloyu silmek istediğinden emin misin?')) return;
+    await remove(ref(db,'tablo'));
+    st('Tablo silindi.',false);
+    setTimeout(()=>st('',''),2000);
+  };
+
+  window.clearScreen = async function() {
+    await set(ref(db,'mesaj'),{text:'',zaman:''});
+    st('Ekran temizlendi.',false);
+    setTimeout(()=>st('',''),2000);
+  };
+
+  window.addRenk = async function() {
+    const bas=document.getElementById('r-bas').value;
+    const bit=document.getElementById('r-bit').value;
+    const renk=document.getElementById('r-renk').value;
+    if(!bas||!bit) return;
+    await push(ref(db,'renkAraliklari'),{baslangic:bas,bitis:bit,renk});
+  };
+
+  window.deleteRenk = async function(key) {
+    await remove(ref(db,'renkAraliklari/'+key));
+  };
+
+  window.exportExcel = function() {
+    const rows = Object.values(tableData).sort((a,b)=>a.tarih?.localeCompare(b.tarih));
+    if (!rows.length) { st('Veri yok!',true); return; }
+    const data = [['Tarih','Hedef','Gerçekleşen','Fark','% Oran','Not']];
+    rows.forEach(r => {
+      const h=parseFloat(r.hedef)||0, g=parseFloat(r.gerceklesen)||0;
+      data.push([r.tarih||'',h,g,g-h,h?((g/h)*100).toFixed(1)+'%':'—',r.not||'']);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Hedef-Gerçekleşen');
+    XLSX.writeFile(wb,'kalibre-hedef.xlsx');
+  };
+
+  function st(msg, isErr) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.style.color = isErr ? '#cc0000' : '#16a34a';
+  }
+
+  document.getElementById('f-gercek').addEventListener('keydown', e=>{ if(e.key==='Enter') window.addRow(); });
+</script>
+</body>
+</html>
