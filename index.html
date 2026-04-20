@@ -142,6 +142,24 @@
   td.bad  { color: #cc0000; font-weight: 700; }
 
   .empty-row td { text-align: center; color: #ccc; padding: 2rem; font-size: 0.85rem; }
+  /* ── POPUP ── */
+  #popup-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 1000;
+    align-items: center; justify-content: center;
+  }
+  #popup-overlay.show { display: flex; }
+  #popup-box {
+    background: #fff; border-radius: 14px; padding: 2rem 2.5rem;
+    text-align: center; max-width: 380px; width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: popIn 0.3s cubic-bezier(0.22,1,0.36,1);
+  }
+  @keyframes popIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }
+  #popup-box .pop-icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
+  #popup-box h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; color: #111; }
+  #popup-box p { font-size: 0.88rem; color: #666; margin-bottom: 1.5rem; line-height: 1.5; }
+  #popup-box button { background: #111; color: #fff; padding: 0.6rem 2rem; border-radius: 8px; font-size: 0.95rem; font-weight: 600; border: none; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -505,6 +523,37 @@
   }
 
   document.getElementById('f-gercek').addEventListener('keydown', e=>{ if(e.key==='Enter') window.addRow(); });
+
+  // ── 07:15 Hatırlatma popup ──
+  function checkPopup() {
+    const now = new Date();
+    const h = now.getHours(), m = now.getMinutes();
+    if (h === 7 && m === 15) {
+      const todayStr = now.toISOString().split('T')[0];
+      const hasToday = Object.values(tableData).some(r => r.tarih === todayStr);
+      if (!hasToday) document.getElementById('popup-overlay').classList.add('show');
+    }
+  }
+  setInterval(checkPopup, 30000);
+  // Açılışta da kontrol et (07:15-07:30 arası açılmışsa)
+  setTimeout(() => {
+    const now = new Date();
+    const h = now.getHours(), m = now.getMinutes();
+    if (h === 7 && m >= 15 && m <= 30) {
+      const todayStr = now.toISOString().split('T')[0];
+      const hasToday = Object.values(tableData).some(r => r.tarih === todayStr);
+      if (!hasToday) document.getElementById('popup-overlay').classList.add('show');
+    }
+  }, 2000);
 </script>
+<!-- POPUP -->
+<div id="popup-overlay">
+  <div id="popup-box">
+    <div class="pop-icon">⚠️</div>
+    <h3>Hedef Girilmemiş!</h3>
+    <p>Bugün için henüz günlük kalibre hedefi girilmedi.<br>Lütfen hedefi girerek ekrana gönderin.</p>
+    <button onclick="document.getElementById('popup-overlay').classList.remove('show'); document.getElementById('f-hedef').focus();">Tamam, Gireyim</button>
+  </div>
+</div>
 </body>
 </html>
